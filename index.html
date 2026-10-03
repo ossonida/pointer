@@ -73,6 +73,9 @@ dialog .swatch{width:28px;height:28px}
 .swipe-delete{position:absolute;right:0;top:0;bottom:0;width:84px;color:#fff;background:#b92542;font-weight:700;font-size:15px}
 @media(max-width:600px){.card{padding:0;min-height:0}.card-content{min-height:72px;padding:10px 12px;grid-template-columns:minmax(0,1fr) 44px minmax(60px,88px) 44px;gap:6px}}
 @media(prefers-reduced-motion:reduce){.card-content{transition:none}}
+
+.card,.card-content,.card-content button,.swipe-delete{touch-action:pan-y}
+.card-content,.card-content button{user-select:none;-webkit-user-select:none}
 </style>
 </head>
 <body>
@@ -98,21 +101,40 @@ function randomColor(excludedId=editing){const occupied=c=>players.some(p=>p.id!
 function ink(color){const rgb=color.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2]>.179?'#10131a':'#ffffff';}
 function render(){const container=$('cards');const previous=new Map([...container.querySelectorAll('.card')].map(card=>[card.dataset.playerId,card.getBoundingClientRect()]));container.replaceChildren();$('stats').textContent=`PLAYERS / ${String(players.length).padStart(2,'0')}`;$('reset').disabled=!players.length;$('resetPlayers').disabled=!players.length;if(!players.length){const empty=document.createElement('div');empty.className='empty';empty.innerHTML='<div class="empty-icon">＋</div><h1>첫 번째 플레이어를 추가하세요</h1><p>닉네임과 컬러를 정하면 준비 끝.<br>플레이어를 추가하고 점수를 기록해 보세요.</p><button class="primary">＋ 플레이어 추가</button>';empty.querySelector('button').onclick=()=>openPlayer();container.append(empty);return;}const ranked=[...players].sort((a,b)=>b.score-a.score);for(const [index,p] of ranked.entries()){const card=document.createElement('article');card.className='card';card.dataset.playerId=p.id;card.style.setProperty('--color',p.color);const fg=ink(p.color);card.style.setProperty('--ink',fg);card.style.setProperty('--shade',fg==='#ffffff'?'#ffffff30':'#00000022');const name=document.createElement('button');name.className='name';name.setAttribute('aria-label',`${p.name} 수정 또는 삭제`);const rank=document.createElement('span');rank.className='rank';rank.textContent=`${ranked.findIndex(x=>x.score===p.score)+1}위`;const strong=document.createElement('strong');strong.textContent=p.name;const small=document.createElement('small');small.textContent='수정 · 삭제';name.append(rank,strong,small);name.onclick=()=>openPlayer(p.id);const minus=document.createElement('button');minus.className='step';minus.textContent='−';minus.setAttribute('aria-label',`${p.name} 1점 빼기`);minus.onclick=()=>change(p,-1);const score=document.createElement('button');score.className='score';score.textContent=p.score.toLocaleString('ko-KR');score.setAttribute('aria-label',`${p.name} 점수 ${p.score}, 직접 입력`);score.onclick=()=>openScore(p.id);const plus=document.createElement('button');plus.className='step';plus.textContent='＋';plus.setAttribute('aria-label',`${p.name} 1점 더하기`);plus.onclick=()=>change(p,1);const content=document.createElement('div');content.className='card-content';content.append(name,minus,score,plus);const remove=document.createElement('button');remove.className='swipe-delete';remove.textContent='삭제';remove.setAttribute('aria-label',`${p.name} 삭제`);remove.onclick=()=>deletePlayer(p.id);card.append(remove,content);setupSwipe(card,content,remove,p.id);container.append(card);}animateRanking(container,previous);}
 function setupSwipe(card,content,remove,id){
-let startX=0,startY=0,startOffset=0,offset=0,dragging=false,horizontal=false,suppressUntil=0;
+let startX=0,startY=0,startOffset=0,offset=0,dragging=false,horizontal=false,suppressUntil=0,pointerId=null;
 function settle(open){card.classList.remove('swipe-dragging');card.classList.toggle('swipe-open',open);content.style.transform='';remove.tabIndex=open?0:-1;remove.setAttribute('aria-hidden',String(!open));offset=open?-84:0;}
 settle(swipedId===id);
-content.addEventListener('pointerdown',e=>{if(e.isPrimary===false||e.button!==0)return;startX=e.clientX;startY=e.clientY;startOffset=swipedId===id?-84:0;offset=startOffset;dragging=true;horizontal=false;});
-content.addEventListener('pointermove',e=>{
-if(!dragging)return;
+card.addEventListener('pointerdown',e=>{
+if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;
+pointerId=e.pointerId;startX=e.clientX;startY=e.clientY;startOffset=card.classList.contains('swipe-open')?-84:0;offset=startOffset;dragging=true;horizontal=false;
+});
+card.addEventListener('pointermove',e=>{
+if(!dragging||e.pointerId!==pointerId)return;
 const dx=e.clientX-startX,dy=e.clientY-startY;
-if(!horizontal){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){dragging=false;return;}if(Math.abs(dx)<10||Math.abs(dx)<=Math.abs(dy))return;horizontal=true;content.setPointerCapture(e.pointerId);card.classList.add('swipe-dragging');}
+if(!horizontal){
+if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)*1.3){dragging=false;return;}
+if(Math.abs(dx)<6||Math.abs(dx)<Math.abs(dy))return;
+horizontal=true;card.classList.add('swipe-dragging');card.setPointerCapture(e.pointerId);
+}
+if(e.cancelable)e.preventDefault();
 offset=Math.max(-84,Math.min(0,startOffset+dx));content.style.transform=`translateX(${offset}px)`;
 });
-function finish(cancelled){if(!dragging)return;dragging=false;if(!horizontal)return;suppressUntil=Date.now()+400;const open=cancelled?startOffset<0:offset<-38;if(open){document.querySelectorAll('.swipe-open').forEach(other=>{if(other!==card){other.classList.remove('swipe-open');const button=other.querySelector('.swipe-delete');button.tabIndex=-1;button.setAttribute('aria-hidden','true');}});swipedId=id;}else if(swipedId===id)swipedId=null;settle(open);}
-content.addEventListener('pointerup',()=>finish(false));
-content.addEventListener('pointercancel',()=>finish(true));
-content.addEventListener('lostpointercapture',()=>finish(true));
-content.addEventListener('click',e=>{if(Date.now()<suppressUntil){e.preventDefault();e.stopPropagation();}},true);
+function finish(e,cancelled){
+if(!dragging||e.pointerId!==pointerId)return;
+dragging=false;
+if(!horizontal)return;
+suppressUntil=Date.now()+400;
+const distance=e.clientX-startX;
+const open=cancelled?startOffset<0:distance>18?false:distance<-18?true:startOffset<0;
+if(open){document.querySelectorAll('.swipe-open').forEach(other=>{if(other!==card){other.classList.remove('swipe-open');const button=other.querySelector('.swipe-delete');button.tabIndex=-1;button.setAttribute('aria-hidden','true');}});swipedId=id;}
+else if(swipedId===id)swipedId=null;
+settle(open);
+}
+card.addEventListener('pointerup',e=>finish(e,false));
+card.addEventListener('pointercancel',e=>finish(e,true));
+// Capturing a pointer from a child button emits lostpointercapture on that button.
+// Do not treat that bubbling event as a cancelled swipe.
+card.addEventListener('click',e=>{if(Date.now()<suppressUntil){e.preventDefault();e.stopPropagation();}},true);
 }
 function animateRanking(container,previous){
 if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
