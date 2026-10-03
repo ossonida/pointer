@@ -39,6 +39,28 @@ header{margin-bottom:16px}
 .rank{font-size:10px;margin-bottom:3px}
 .cards{gap:7px}
 }
+
+/* Keep dialogs within the space above the software keyboard. */
+dialog{position:fixed;margin:0;left:50%;top:calc(var(--keyboard-top,0px) + var(--keyboard-height,100dvh)/2);transform:translate(-50%,-50%);max-height:calc(var(--keyboard-height,100dvh) - 16px);overflow:auto;padding:20px}
+dialog h2{font-size:21px;margin-bottom:16px}
+dialog .field{margin:12px 0 7px}
+dialog .hint{margin:10px 0;font-size:12px;line-height:1.5}
+dialog .actions{margin-top:16px}
+dialog .palette{gap:9px;margin-top:10px}
+dialog .swatch{width:28px;height:28px}
+.error:empty{display:none}
+#scoreDialog{padding:14px 16px;border-radius:18px}
+.score-heading{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+#scoreDialog h2{flex:1;min-width:0;margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score-close{width:36px;height:36px;padding:0;flex-shrink:0;border-radius:10px;background:#243047;color:#ccd9ed;font-size:26px}
+#scoreDialog .signs{gap:8px}
+#scoreDialog .signs button{min-height:40px;padding:8px 12px}
+.score-entry{display:flex;gap:8px;margin-top:10px;align-items:stretch}
+#scoreDialog #amount{min-width:0;flex:1;width:0;height:48px;padding:10px 12px;font-size:24px}
+.score-entry button{min-width:72px;padding:10px 14px;border-radius:12px}
+#scoreDialog .preview{margin-top:9px;font-size:14px;line-height:20px;overflow-wrap:anywhere}
+#scoreDialog .error{margin-top:6px;min-height:0;font-size:12px}
+@media(max-width:600px){dialog{padding:16px}#playerDialog .hint{display:none}}
 </style>
 </head>
 <body>
@@ -48,8 +70,8 @@ header{margin-bottom:16px}
  <footer>이름을 누르면 수정 · 점수를 누르면 직접 입력<br><br>이 브라우저에 자동 저장됩니다</footer>
 </main>
 <dialog id="playerDialog"><form id="playerForm"><h2 id="playerTitle">플레이어 추가</h2><label class="field" for="nickname">닉네임</label><input id="nickname" type="text" maxlength="30" placeholder="닉네임을 입력하세요" required autocomplete="off"><label class="field" for="color">플레이어 컬러</label><div class="color-row"><input id="color" type="color"><button class="random" id="random" type="button">↻ 랜덤 컬러</button></div><div class="palette" id="palette"></div><p class="hint">다른 플레이어가 사용 중인 컬러는 선택할 수 없어요.</p><div class="error" id="playerError" role="alert"></div><div class="actions"><button class="danger" id="remove" type="button">삭제</button><button type="button" data-close>취소</button><button class="primary" type="submit">저장</button></div></form></dialog>
-<dialog id="scoreDialog"><form id="scoreForm"><h2 id="scoreTitle">점수 추가</h2><div class="signs"><button type="button" id="positive" class="active" aria-pressed="true">＋ 더하기</button><button type="button" id="negative" aria-pressed="false">− 빼기</button></div><label class="field" for="amount">변경할 점수</label><input id="amount" type="number" min="0" step="1" required placeholder="예: 10" inputmode="numeric"><div class="preview" id="preview" aria-live="polite"></div><div class="error" id="scoreError" role="alert"></div><div class="actions"><button type="button" data-close>취소</button><button class="primary" type="submit">적용</button></div></form></dialog>
-<dialog id="bulkDialog"><form id="bulkForm"><h2>여러 명 추가</h2><p class="hint">기존 플레이어는 유지하고, 간단한 한글 이름과 서로 다른 컬러로 한 번에 추가합니다.</p><label class="field" for="bulkCount">추가할 인원</label><input id="bulkCount" type="number" min="1" max="100" step="1" value="4" required inputmode="numeric"><div class="error" id="bulkError" role="alert"></div><div class="actions"><button type="button" data-close>취소</button><button class="primary" type="submit">추가</button></div></form></dialog>
+<dialog id="scoreDialog"><form id="scoreForm"><div class="score-heading"><h2 id="scoreTitle">점수 입력</h2><button type="button" class="score-close" data-close aria-label="점수 입력 취소">×</button></div><div class="signs"><button type="button" id="positive" class="active" aria-pressed="true">＋ 더하기</button><button type="button" id="negative" aria-pressed="false">− 빼기</button></div><div class="score-entry"><input id="amount" type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="점수" aria-label="변경할 점수"><button class="primary" type="submit">적용</button></div><div class="preview" id="preview" aria-live="polite"></div><div class="error" id="scoreError" role="alert"></div></form></dialog>
+<dialog id="bulkDialog"><form id="bulkForm"><h2>여러 명 추가</h2><p class="hint">기존 플레이어는 유지하고, 간단한 한글 이름과 서로 다른 컬러로 한 번에 추가합니다.</p><label class="field" for="bulkCount">추가할 인원</label><input id="bulkCount" type="text" pattern="[0-9]*" value="4" required inputmode="numeric" enterkeyhint="done" autocomplete="off"><div class="error" id="bulkError" role="alert"></div><div class="actions"><button type="button" data-close>취소</button><button class="primary" type="submit">추가</button></div></form></dialog>
 <dialog id="confirmDialog"><h2 id="confirmTitle"></h2><p class="hint" id="confirmText"></p><div class="actions"><button data-close>취소</button><button class="primary" id="confirm">확인</button></div></dialog>
 <script>
 'use strict';
@@ -75,14 +97,18 @@ $('resetPlayers').onclick=()=>confirmation('플레이어 리셋','추가된 플�
 const simpleNames=['하늘','바다','구름','나무','별빛','달빛','햇살','노을','봄이','여름','가을','겨울','두리','보리','나비','토리','모모','루루','콩이','솔이','산들','이슬','초롱','다온','소담','라온','새봄','누리','도담','하루'];
 function randomName(){const available=simpleNames.filter(n=>!players.some(p=>p.name===n));if(available.length)return available[Math.floor(Math.random()*available.length)];const base=simpleNames[Math.floor(Math.random()*simpleNames.length)];let suffix=2;while(players.some(p=>p.name===base+suffix))suffix++;return base+suffix;}
 $('bulk').onclick=()=>{$('bulkCount').value='4';$('bulkError').textContent='';$('bulkDialog').showModal();$('bulkCount').focus();};
-$('bulkForm').onsubmit=e=>{e.preventDefault();const count=Number($('bulkCount').value);if(!Number.isInteger(count)||count<1||count>100){$('bulkError').textContent='1명부터 100명까지 입력해주세요.';return;}for(let i=0;i<count;i++)players.push({id:crypto.randomUUID(),name:randomName(),color:randomColor(null),score:0});save();$('bulkDialog').close();};
+$('bulkForm').onsubmit=e=>{e.preventDefault();const count=Number($('bulkCount').value);if(!/^[0-9]+$/.test($('bulkCount').value)||!Number.isInteger(count)||count<1||count>100){$('bulkError').textContent='1명부터 100명까지 입력해주세요.';return;}for(let i=0;i<count;i++)players.push({id:crypto.randomUUID(),name:randomName(),color:randomColor(null),score:0});save();$('bulkDialog').close();};
 $('confirm').onclick=()=>{const callback=pending;pending=null;$('confirmDialog').close();if(callback)callback();};
 function setSign(value){sign=value;for(const [id,s] of [['positive',1],['negative',-1]]){$(id).classList.toggle('active',s===sign);$(id).setAttribute('aria-pressed',String(s===sign));}preview();}
 function preview(){const p=players.find(p=>p.id===scoring);const a=Number($('amount').value);$('preview').textContent=p?`${p.score.toLocaleString('ko-KR')} ${sign===1?'+':'−'} ${Number.isSafeInteger(a)&&a>=0?a.toLocaleString('ko-KR'):'…'} = ${Number.isSafeInteger(a)&&a>=0&&Number.isSafeInteger(p.score+sign*a)?(p.score+sign*a).toLocaleString('ko-KR'):'…'}`:'';}
-function openScore(id){scoring=id;const p=players.find(p=>p.id===id);$('scoreTitle').textContent=`${p.name} · 점수 입력`;$('amount').value='';$('scoreError').textContent='';setSign(1);$('scoreDialog').showModal();$('amount').focus();}
+function openScore(id){scoring=id;const p=players.find(p=>p.id===id);$('scoreTitle').textContent=`${p.name} · 점수 입력`;$('amount').value='';$('scoreError').textContent='';setSign(1);$('scoreDialog').showModal();$('amount').focus({preventScroll:true});$('amount').select();}
 $('positive').onclick=()=>setSign(1);$('negative').onclick=()=>setSign(-1);$('amount').oninput=preview;
-$('scoreForm').onsubmit=e=>{e.preventDefault();const amount=Number($('amount').value);const p=players.find(p=>p.id===scoring);if(!$('amount').value.trim()||!Number.isSafeInteger(amount)||amount<0||!Number.isSafeInteger(p.score+sign*amount)){$('scoreError').textContent='범위 내의 0 이상 정수를 입력해주세요.';return;}if(change(p,sign*amount))$('scoreDialog').close();};
+$('scoreForm').onsubmit=e=>{e.preventDefault();const amount=Number($('amount').value);const p=players.find(p=>p.id===scoring);if(!/^[0-9]+$/.test($('amount').value)||!Number.isSafeInteger(amount)||amount<0||!Number.isSafeInteger(p.score+sign*amount)){$('scoreError').textContent='범위 내의 0 이상 정수를 입력해주세요.';return;}if(change(p,sign*amount))$('scoreDialog').close();};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+function fitDialogs(){const viewport=window.visualViewport;document.documentElement.style.setProperty('--keyboard-height',`${viewport?viewport.height:window.innerHeight}px`);document.documentElement.style.setProperty('--keyboard-top',`${viewport?viewport.offsetTop:0}px`);}
+if(window.visualViewport){window.visualViewport.addEventListener('resize',fitDialogs);window.visualViewport.addEventListener('scroll',fitDialogs);}
+window.addEventListener('resize',fitDialogs);
+fitDialogs();
 render();
 </script>
 </body>
