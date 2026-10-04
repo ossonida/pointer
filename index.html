@@ -143,6 +143,8 @@ dialog .swatch{width:28px;height:28px}
 .footer-guide{line-height:1.6;font-size:11px}
 #installApp{display:block;margin:6px auto 0;padding:6px 12px;min-height:40px;border-radius:10px;background:none;color:#8bbaff;font-size:13px;text-decoration:underline;text-underline-offset:3px}
 #installApp:disabled{color:#7c899e;cursor:default;text-decoration:none}
+
+#installApp[hidden]{display:none}
 </style>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%0A%3Ctitle%3EScore%20Counter%3C%2Ftitle%3E%0A%3Cdefs%3E%3CclipPath%20id%3D%22rounded%22%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%2288%22%2F%3E%3C%2FclipPath%3E%3C%2Fdefs%3E%0A%3Cg%20clip-path%3D%22url(%23rounded)%22%3E%0A%3Cpath%20fill%3D%22%230755e9%22%20d%3D%22M0%200h256v512H0z%22%2F%3E%0A%3Cpath%20fill%3D%22%23ed1425%22%20d%3D%22M256%200h256v512H256z%22%2F%3E%0A%3C%2Fg%3E%0A%3Cg%20fill%3D%22%23fff%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20text-anchor%3D%22middle%22%3E%0A%3Ctext%20x%3D%22128%22%20y%3D%22348%22%20font-size%3D%22302%22%20font-weight%3D%22800%22%3E2%3C%2Ftext%3E%0A%3Ctext%20x%3D%22389%22%20y%3D%22348%22%20font-size%3D%22302%22%20font-weight%3D%22800%22%3E0%3C%2Ftext%3E%0A%3Ccircle%20cx%3D%22254%22%20cy%3D%22207%22%20r%3D%2223%22%2F%3E%0A%3Ccircle%20cx%3D%22254%22%20cy%3D%22286%22%20r%3D%2223%22%2F%3E%0A%3Ctext%20x%3D%22256%22%20y%3D%22443%22%20font-size%3D%2269%22%20font-weight%3D%22700%22%3Escore%3C%2Ftext%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E%0A">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -257,14 +259,17 @@ function fitDialogs(){const viewport=window.visualViewport;document.documentElem
 if(window.visualViewport){window.visualViewport.addEventListener('resize',fitDialogs);window.visualViewport.addEventListener('scroll',fitDialogs);}
 window.addEventListener('resize',fitDialogs);
 let installPrompt=null;
-function installed(){installPrompt=null;$('installApp').textContent='홈 화면에 추가됨';$('installApp').disabled=true;}
-window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;});
+const INSTALL_KEY='score.homeScreenInstalled';
+const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+function installed(){installPrompt=null;$('installApp').hidden=true;try{localStorage.setItem(INSTALL_KEY,'1');}catch{}}
+try{if(localStorage.getItem(INSTALL_KEY)==='1')$('installApp').hidden=true;}catch{}
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();if(standalone)return;installPrompt=event;$('installApp').hidden=false;try{localStorage.removeItem(INSTALL_KEY);}catch{}});
 window.addEventListener('appinstalled',installed);
-if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)installed();
+if(standalone)installed();
 $('installApp').onclick=async()=>{
 if(installPrompt){
 const prompt=installPrompt;installPrompt=null;
-try{await prompt.prompt();await prompt.userChoice;return;}catch{}
+try{await prompt.prompt();const choice=await prompt.userChoice;if(choice.outcome==='accepted')installed();return;}catch{}
 }
 const agent=navigator.userAgent||'';
 $('installHelp').textContent=/iPad|iPhone|iPod/.test(agent)?'Safari에서 공유 버튼을 누른 뒤 “홈 화면에 추가”를 선택해주세요.':/SamsungBrowser/.test(agent)?'삼성 인터넷 메뉴에서 “현재 페이지 추가” → “홈 화면”을 선택해주세요.':'브라우저 메뉴에서 “앱 설치” 또는 “홈 화면에 추가”를 선택해주세요. 설치 메뉴가 없다면 Chrome이나 삼성 인터넷에서 이 페이지를 열어주세요.';
