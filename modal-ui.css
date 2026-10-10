@@ -1,0 +1,73 @@
+/* Shared popup rhythm: compact fields, aligned actions and one scroll surface. */
+dialog{--popup-surface:#111722;--popup-line:#29364b;width:calc(100% - 24px);max-width:440px;padding:20px;border-radius:20px;border-color:var(--popup-line);background:var(--popup-surface);box-shadow:0 24px 80px #0007;max-height:min(720px,calc(var(--keyboard-height,100dvh) - 24px));scroll-padding:16px;overscroll-behavior:contain}
+dialog h2{font-size:19px;font-weight:600;letter-spacing:-.4px;line-height:1.3;margin:0}
+.record-head,.score-heading,.player-heading,.popup-heading{display:flex;align-items:center;gap:8px;min-height:36px;margin:0 0 14px}
+.record-head h2,.score-heading h2,.player-heading h2,.popup-heading h2{flex:1;min-width:0;margin:0}
+dialog .score-close{display:grid;place-items:center;width:36px;height:36px;padding:0;border-radius:10px;background:#202b3e;color:#b9c6db;font-size:24px;line-height:1;flex:none}
+dialog label,dialog .field,.record-dialog label{font-size:12px;font-weight:500;line-height:1.4;margin:12px 0 6px;color:#acb9ce}
+dialog input:not([type=color]):not([type=checkbox]),dialog select,.record-dialog input,.record-dialog select{min-width:0;width:100%;height:44px;min-height:44px;padding:10px 12px;border:1px solid #344158;border-radius:10px;background:#0b111c;color:#f0f5ff;font-size:16px;line-height:22px;font-family:inherit}
+dialog input::placeholder{color:#75839b;font-size:14px}
+dialog button{font-weight:500;touch-action:manipulation}
+dialog button:disabled{opacity:.45;cursor:default}
+dialog button:not(.swatch):not(.score-close):not(.bgg-web-link):not(.game-result-choice){min-height:40px}
+dialog .primary{background:#237bff;color:#fff}
+dialog .secondary,dialog .actions button:not(.primary){background:#202b3e;color:#d5deed}
+dialog .record-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+dialog .record-row>div{min-width:0}
+dialog .record-row>button{height:44px;min-width:72px;padding:10px 14px;margin:0;white-space:nowrap}
+#savePlayDialog .record-row:has(#playDate){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+dialog .hint,dialog .record-note{font-size:12px;line-height:1.6;margin:8px 0;color:#96a6be}
+dialog .error,dialog .record-error{font-size:12px;line-height:1.5;min-height:0;margin:8px 0 0}
+dialog .record-actions,dialog .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-top:16px;padding:0;position:static;background:transparent}
+dialog .record-actions button,dialog .actions button{padding:10px 16px;border-radius:10px;font-size:14px;line-height:20px}
+#savePlayForm>.record-actions{position:sticky;bottom:-20px;z-index:2;padding:12px 0 4px;background:var(--popup-surface);border-top:1px solid var(--popup-line)}
+#savePlayForm>.record-actions button{flex:1}
+#savePlayDialog{max-width:460px}
+#savePlayDialog details{margin-top:8px;padding:8px 10px;border:1px solid var(--popup-line);border-radius:10px}
+#savePlayDialog summary{margin:0;cursor:pointer}
+#savePlayDialog details input{margin-top:8px}
+#savePlayDialog .record-snapshot{gap:6px;margin:12px 0;max-height:68px}
+#savePlayDialog .record-results{max-height:min(180px,calc(var(--keyboard-height,100dvh)*.27));margin-top:8px}
+#savePlayDialog .game-result-choice{padding:9px 10px;gap:10px}
+#savePlayDialog .game-result-info strong{font-size:14px}
+#savePlayDialog .game-result-cover{width:34px;height:40px;font-size:23px}
+#historyDialog{max-width:650px}
+#historyDialog .record-tabs{gap:6px;padding:4px;background:#0b111c;border:1px solid var(--popup-line);border-radius:12px}
+#historyDialog .record-tabs button{border-radius:8px;background:transparent;font-size:14px;min-height:40px}
+#historyDialog .record-tabs button.active{background:#243c60;color:#dceaff}
+#historyDialog .record-item{padding:14px;border-radius:12px}
+#historyDialog .record-item h3{font-size:16px;font-weight:600}
+#historyDialog .record-item .record-actions{margin-top:12px;justify-content:space-between}
+#accountDialog{max-width:460px}
+.account-profile{padding:12px 14px;border:1px solid var(--popup-line);background:#0b111c;border-radius:12px}
+#accountName{font-size:15px;font-weight:500;color:#e6edfa;margin:0;overflow-wrap:anywhere}
+#accountStorage{margin:5px 0 0}
+#accountDialog .account-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+#accountDialog .account-actions button{width:100%;white-space:normal;padding:9px 10px;min-height:42px;font-size:12px;line-height:1.5;border-radius:10px}
+#accountDialog .account-actions:has(#accountLogin:not([hidden])){grid-template-columns:1fr}
+#accountDialog button[hidden],#bggAccountSection[hidden]{display:none}
+#bggAccountSection{margin-top:16px;padding-top:16px;border-top:1px solid var(--popup-line)}
+#bggAccountSection h3{font-size:15px;font-weight:600;margin:0 0 8px}
+#bggAccountSection #bggImport{width:100%;margin-top:10px;padding:10px 12px;border-radius:10px;font-size:14px}
+.bgg-explanation{margin-top:12px;font-size:12px;color:#96a6be;line-height:1.6}
+.bgg-explanation summary{cursor:pointer}
+#bggAccountData{max-height:200px}
+#bggAccountData details{padding:0 10px;border:1px solid var(--popup-line);border-radius:10px;margin-top:8px;background:#0b111c}
+#bggAccountData p{margin:8px 0;overflow-wrap:anywhere}
+#playerDialog,#scoreDialog{padding:16px;max-width:420px;border-radius:20px}
+#playerDialog h2,#scoreDialog h2{font-size:19px;font-weight:600}
+#playerDialog .player-entry,#scoreDialog .score-entry{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:8px}
+#playerDialog #nickname{width:100%;height:44px;font-size:16px}
+#scoreDialog #amount{width:100%;height:48px;font-size:24px}
+#playerDialog .player-entry button,#scoreDialog .score-entry button{padding:8px 10px;border-radius:10px}
+#playerDialog .player-remove{min-height:36px;padding:6px 10px;font-size:12px}
+#playerDialog .color-row{height:36px;margin-top:12px;gap:10px}
+#playerDialog .color-row label{margin:0}
+#playerDialog .random{min-height:36px;padding:6px 10px;border-radius:10px}
+#playerDialog .palette{display:grid;grid-template-columns:repeat(8,24px);justify-content:space-between;gap:10px;margin-top:12px}
+#scoreDialog .signs{gap:8px}
+#scoreDialog .signs button{min-height:40px;font-size:14px;border-radius:10px}
+#scoreDialog .preview{font-size:13px;margin-top:10px}
+#bulkDialog .actions button{flex:1}
+@media(max-width:380px){dialog{padding:16px}#savePlayForm>.record-actions{bottom:-16px}#playerDialog .palette{grid-template-columns:repeat(6,24px)}#accountDialog .account-actions{grid-template-columns:1fr}}
+@media(max-height:480px){dialog{padding:12px 16px;max-height:calc(var(--keyboard-height,100dvh) - 12px)}.record-head,.score-heading,.player-heading,.popup-heading{margin-bottom:8px}#savePlayForm>.record-actions{bottom:-12px;padding-top:8px}#savePlayDialog .record-snapshot{max-height:40px}#accountDialog .record-note{margin:5px 0}}

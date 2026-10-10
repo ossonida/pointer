@@ -1,6 +1,6 @@
 import {searchLocalGames} from './game-catalog.js';
 import {createPlay,isPlay,gameKey,winnerIds,gameStats} from './records-core.js';
-import {cloudConfigured,connectCloud,login,logout,loadCloud,saveCloud,deleteCloud,idToken} from './cloud-records.js?v=7';
+import {cloudConfigured,connectCloud,login,logout,loadCloud,saveCloud,deleteCloud,idToken} from './cloud-records.js?v=8';
 import {bggSearchUrl} from './firebase-config.js';
 const $=id=>document.getElementById(id), api=window.ScoreCounter;
 let currentUser=null,records=[],pending=new Set(),mode='history',accountEpoch=0,searchController=null,searchSerial=0,snapshot=[],syncing=false,searchTimer=null;
