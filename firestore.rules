@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/plays/{playId} {
+      function owns() { return request.auth != null && request.auth.uid == uid; }
+      function valid() {
+        let p = request.resource.data;
+        return p.keys().hasOnly(['id','game','date','rule','createdAt','players'])
+          && p.keys().hasAll(['id','game','date','rule','createdAt','players'])
+          && p.id == playId && p.id is string && p.id.size() <= 100
+          && p.game is map && p.game.keys().hasOnly(['name','bggId'])
+          && p.game.name is string && p.game.name.size() > 0 && p.game.name.size() <= 120
+          && p.game.bggId is string && p.game.bggId.size() <= 10
+          && p.date is string && p.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && p.createdAt is string && p.createdAt.size() <= 40
+          && p.rule in ['highest','lowest','cooperative']
+          && p.players is list && p.players.size() > 0 && p.players.size() <= 100;
+      }
+      allow read, delete: if owns();
+      allow create, update: if owns() && valid();
+    }
+  }
+}
