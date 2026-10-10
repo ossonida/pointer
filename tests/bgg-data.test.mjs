@@ -1,0 +1,5 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {collectionData,playsData} from '../functions/bgg-data.js';
+test('collection imports owned games only and retains the BGG ID',()=>{const result=collectionData({items:{item:[{'@_objectid':'13',name:'Catan',status:{'@_own':'1'}},{'@_objectid':'822',name:'Carcassonne',status:{'@_own':'0'}}]}});assert.equal(result.total,1);assert.equal(result.items[0].gameId,'13');});
+test('public plays preserve absent scores, wins, quantity and remote identity',()=>{const result=playsData({plays:{'@_total':'101',play:[{'@_id':'99','@_date':'2026-10-10','@_quantity':'2',item:{'@_objectid':'13','@_name':'Catan'},players:{player:[{'@_name':'A','@_score':'','@_win':'1'},{'@_name':'B','@_score':'-5','@_win':'0'}]}}]}});assert.equal(result.total,101);assert.equal(result.items[0].id,'99');assert.equal(result.items[0].quantity,2);assert.equal(result.items[0].players[0].score,null);assert.equal(result.items[0].players[0].win,true);assert.equal(result.items[0].players[1].score,-5);});

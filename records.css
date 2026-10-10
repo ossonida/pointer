@@ -14,3 +14,5 @@
 .bgg-web-link{color:#9fb8da;background:none;padding:4px 0;font-size:12px;text-decoration:underline;margin-bottom:4px}
 
 .record-links [hidden]{display:none!important}.record-links{align-items:center}.record-links #accountLink{color:#b2cfff;text-decoration:underline;text-underline-offset:3px;font-size:12px;padding:8px 2px}.record-links #accountLink:focus-visible{outline:2px solid #80caff;outline-offset:3px}#recordLoginHint{color:#929bad;font-size:12px}
+
+#bggAccountSection[hidden]{display:none}#bggAccountSection{border-top:1px solid #29374c;margin-top:16px;padding-top:12px}#bggAccountSection h3{font-size:16px;margin:0 0 8px}#bggAccountSection button{padding:8px 12px;min-height:40px}#bggAccountData{max-height:240px;overflow:auto;font-size:12px;line-height:1.6}#bggAccountData a{color:#b2cfff}#bggAccountData summary{padding:8px 0;cursor:pointer}
