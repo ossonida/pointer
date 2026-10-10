@@ -1,5 +1,5 @@
 'use strict';
-const CACHE='score-counter-shell-v4-game-search';
+const CACHE='score-counter-shell-v5-account-footer';
 const BASE=new URL('./',self.location.href);
 const INDEX=new URL('index.html',BASE).href;
 const ASSETS=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','records.js','records-core.js','cloud-records.js','firebase-config.js','records.css','game-catalog.js'].map(path=>new URL(path,BASE).href);
