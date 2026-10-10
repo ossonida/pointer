@@ -1,8 +1,9 @@
+import {searchLocalGames} from './game-catalog.js';
 import {createPlay,isPlay,gameKey,winnerIds,gameStats} from './records-core.js';
 import {cloudConfigured,connectCloud,login,logout,loadCloud,saveCloud,deleteCloud,idToken} from './cloud-records.js';
 import {bggSearchUrl} from './firebase-config.js';
 const $=id=>document.getElementById(id), api=window.ScoreCounter;
-let currentUser=null,records=[],pending=new Set(),mode='history',accountEpoch=0,searchController=null,searchSerial=0,snapshot=[],syncing=false;
+let currentUser=null,records=[],pending=new Set(),mode='history',accountEpoch=0,searchController=null,searchSerial=0,snapshot=[],syncing=false,searchTimer=null;
 const guestKey='score.plays.v1.guest';
 function key(){return currentUser?`score.plays.v1.user.${currentUser.uid}`:guestKey;}
 function read(keyName){try{const data=JSON.parse(localStorage.getItem(keyName)||'{}');return {records:Array.isArray(data.records)?data.records.filter(isPlay):[],pending:Array.isArray(data.pending)?data.pending:[]};}catch{return {records:[],pending:[]};}}
@@ -17,22 +18,44 @@ function show(id){$(id).showModal();}
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function updateButtons(){ $('savePlay').disabled=!api.getPlayers().length;$('accountLink').textContent=currentUser?'내 계정':'Google 로그인';$('accountName').textContent=currentUser?(currentUser.displayName||currentUser.email||'로그인됨'):'Google 로그인으로 다른 기기에서도 기록을 확인하세요.';$('accountLogin').hidden=!!currentUser;$('accountLogout').hidden=!currentUser;$('guestUpload').hidden=!currentUser||!read(guestKey).records.length;$('cloudSync').hidden=!currentUser;$('accountStorage').textContent=currentUser?(pending.size?`${pending.size}개 기록이 클라우드 저장 대기 중입니다.`:'이 계정의 기록을 클라우드에 저장합니다.'):'현재 기록은 이 브라우저에 저장됩니다.';}
 function updateGameOptions(){const groups=gameStats(records);$('savedGames').replaceChildren(...groups.map(g=>{const o=node('option');o.value=g.game.name;return o;}));}
-function openSave(){snapshot=api.getPlayers();if(!snapshot.length){notify('먼저 플레이어를 추가해주세요.');return;}$('playGame').value='';$('playBggId').value='';$('playDate').value=today();$('playRule').value='highest';$('playError').textContent='';$('bggResults').replaceChildren();$('playSnapshot').replaceChildren(...snapshot.map(p=>node('span',`${p.name} ${p.score.toLocaleString('ko-KR')}점`,'record-chip')));updateGameOptions();show('savePlayDialog');$('playGame').focus({preventScroll:true});}
+function openSave(){snapshot=api.getPlayers();if(!snapshot.length){notify('먼저 플레이어를 추가해주세요.');return;}$('playGame').value='';$('playBggId').value='';$('playDate').value=today();$('playRule').value='highest';$('playError').textContent='';$('bggResults').replaceChildren();$('selectedGameInfo').textContent='';$('gameSearchStatus').textContent=bggSearchUrl?'게임명을 입력하면 검색 결과를 선택할 수 있어요.':'저장 게임과 기본 목록 검색 · BGG 전체 검색은 아직 연결되지 않았습니다.';$('playSnapshot').replaceChildren(...snapshot.map(p=>node('span',`${p.name} ${p.score.toLocaleString('ko-KR')}점`,'record-chip')));updateGameOptions();show('savePlayDialog');$('playGame').focus({preventScroll:true});}
 function selectedGame(){const name=$('playGame').value.trim();const known=records.find(p=>p.game.name.normalize('NFKC').toLocaleLowerCase()===name.normalize('NFKC').toLocaleLowerCase());return {name,bggId:$('playBggId').value.trim()||known?.game.bggId||''};}
-$('playGame').addEventListener('input',()=>{$('playBggId').value='';searchSerial++;searchController?.abort();$('searchBgg').disabled=false;$('bggResults').replaceChildren();});
+$('playGame').addEventListener('input',()=>{$('playBggId').value='';$('selectedGameInfo').textContent='';searchSerial++;searchController?.abort();clearTimeout(searchTimer);$('searchBgg').disabled=false;renderGameResults(searchLocalGames($('playGame').value,records));if(bggSearchUrl)searchTimer=setTimeout(searchGames,500);});
 $('savePlayForm').onsubmit=async event=>{event.preventDefault();const button=$('commitPlay');button.disabled=true;try{
  const play=createPlay({game:selectedGame(),date:$('playDate').value,rule:$('playRule').value,players:snapshot});
  const before=records;const oldPending=new Set(pending);records=[play,...records];if(currentUser)pending.add(play.id);
  try{persist();}catch(e){records=before;pending=oldPending;throw Error('브라우저 저장 공간을 사용할 수 없습니다. 기록을 저장하지 못했어요.');}
  close('savePlayDialog');notify(`${play.game.name} 기록을 ${currentUser?'이 기기에 저장했습니다. 클라우드에 동기화합니다.':'이 브라우저에 저장했습니다.'}`);updateButtons();renderHistory();if(currentUser)void sync();
 }catch(error){message('playError',error);}finally{button.disabled=false;}};
-async function searchGames(){const query=$('playGame').value.trim();if(!query){message('playError','검색할 게임명을 입력해주세요.');return;}$('playError').textContent='';
- if(!bggSearchUrl){window.open(`https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=${encodeURIComponent(query)}`,'_blank','noopener,noreferrer');message('playError','BGG 검색 페이지에서 게임명을 확인한 후 입력해주세요. 게임 ID는 선택 사항입니다.');return;}
- searchController?.abort();searchController=new AbortController();const serial=++searchSerial;const button=$('searchBgg');button.disabled=true;
- try{const token=await idToken();const url=new URL(bggSearchUrl);url.searchParams.set('query',query);const response=await fetch(url,{signal:searchController.signal,headers:{Authorization:`Bearer ${token}`}});if(!response.ok)throw Error(response.status===202?'BGG가 검색을 준비 중입니다. 잠시 후 다시 검색해주세요.':'BGG 검색에 연결하지 못했습니다. 게임명을 직접 입력할 수 있어요.');const data=await response.json();if(serial!==searchSerial)return;const games=Array.isArray(data.games)?data.games:[];$('bggResults').replaceChildren();if(!games.length)message('playError','검색 결과가 없습니다. 게임명을 직접 입력해 저장할 수 있어요.');
- for(const game of games){if(!/^[1-9][0-9]{0,9}$/.test(String(game.id))||typeof game.name!=='string')continue;const b=node('button',`${game.name}${game.year?` (${game.year})`:''}`);b.type='button';b.onclick=()=>{$('playGame').value=game.name;$('playBggId').value=String(game.id);$('bggResults').replaceChildren();$('playError').textContent='';};$('bggResults').append(b);}
- }catch(error){if(error.name!=='AbortError'&&serial===searchSerial)message('playError',error);}finally{if(serial===searchSerial)button.disabled=false;}
+function renderGameResults(games){
+ const box=$('bggResults');box.replaceChildren();
+ for(const game of games){
+ if(typeof game.name!=='string'||(game.id&&!/^[1-9][0-9]{0,9}$/.test(String(game.id))))continue;
+ const row=node('div',undefined,'game-result-row'),button=node('button',undefined,'game-result-choice');button.type='button';
+ button.append(node('span','♟','game-result-cover'));
+ const info=node('span',undefined,'game-result-info');info.append(node('strong',game.name),node('small',[game.year,game.id?'#'+game.id:'',game.source||'BGG'].filter(Boolean).join(' · ')));button.append(info);
+ button.onclick=()=>{searchController?.abort();clearTimeout(searchTimer);searchSerial++;$('searchBgg').disabled=false;$('playGame').value=game.name;$('playBggId').value=String(game.id||'');$('selectedGameInfo').textContent='선택됨: '+game.name+(game.id?' · BGG #'+game.id:'');box.replaceChildren();$('playError').textContent='';$('gameSearchStatus').textContent='선택한 게임으로 현재 이름과 점수를 저장합니다.';};
+ row.append(button);
+ if(game.id){const link=node('a','ⓘ','game-result-detail');link.href='https://boardgamegeek.com/boardgame/'+game.id;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label',game.name+' BGG 상세 보기');row.append(link);}
+ box.append(row);
+ }
 }
+async function searchGames(){
+ clearTimeout(searchTimer);
+ const query=$('playGame').value.trim();if(!query){$('bggResults').replaceChildren();$('gameSearchStatus').textContent='검색할 게임명을 입력해주세요.';return;}
+ $('playError').textContent='';const local=searchLocalGames(query,records);renderGameResults(local);
+ if(!bggSearchUrl){$('gameSearchStatus').textContent=local.length?local.length+'개 결과 · 저장 게임 / 기본 목록':'기본 목록에 없는 게임입니다. 이름을 직접 입력해 저장하거나 BGG 웹 검색을 이용해주세요.';return;}
+ searchController?.abort();searchController=new AbortController();const controller=searchController,serial=++searchSerial,button=$('searchBgg');button.disabled=true;$('gameSearchStatus').textContent='BGG 검색 중…';
+ try{
+ const token=await idToken();const url=new URL(bggSearchUrl);url.searchParams.set('query',query);const response=await fetch(url,{signal:controller.signal,headers:{Authorization:'Bearer '+token}});
+ if(!response.ok)throw Error(response.status===202||response.status===429?'BGG가 검색을 준비 중입니다. 잠시 후 다시 검색해주세요.':'BGG에 연결하지 못했습니다. 아래 결과를 선택하거나 게임명을 직접 입력할 수 있어요.');
+ const data=await response.json();if(serial!==searchSerial)return;const merged=new Map(local.map(g=>[g.id?'bgg:'+g.id:'name:'+g.name,g]));
+ for(const game of Array.isArray(data.games)?data.games:[])if(/^[1-9][0-9]{0,9}$/.test(String(game.id))&&typeof game.name==='string')merged.set('bgg:'+game.id,{...game,source:'BGG'});
+ const games=[...merged.values()];renderGameResults(games);$('gameSearchStatus').textContent=games.length?games.length+'개 결과 · 원하는 게임을 선택해주세요.':'결과가 없습니다. 게임명을 직접 입력해 저장할 수 있어요.';
+ }catch(error){if(error.name!=='AbortError'&&serial===searchSerial)$('gameSearchStatus').textContent=error.message;}
+ finally{if(serial===searchSerial)button.disabled=false;}
+}
+$('openBggWebsite').onclick=()=>{const query=$('playGame').value.trim();if(query)window.open('https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q='+encodeURIComponent(query),'_blank','noopener,noreferrer');};
 $('searchBgg').onclick=searchGames;
 function renderHistory(){const groups=gameStats(records),select=$('recordFilter'),selected=select.value;select.replaceChildren(node('option','모든 게임'));select.firstChild.value='';for(const g of groups){const o=node('option',`${g.game.name} (${g.count}회)`);o.value=g.key;select.append(o);}if(groups.some(g=>g.key===selected))select.value=selected;
 const filtered=records.filter(p=>!select.value||gameKey(p.game)===select.value).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));const box=$('recordList');box.replaceChildren();$('historyTab').classList.toggle('active',mode==='history');$('statsTab').classList.toggle('active',mode==='stats');
