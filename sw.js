@@ -1,8 +1,8 @@
 'use strict';
-const CACHE='score-counter-shell-v5-account-footer';
+const CACHE='score-counter-shell-v6-account-footer-refresh';
 const BASE=new URL('./',self.location.href);
 const INDEX=new URL('index.html',BASE).href;
-const ASSETS=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','records.js','records-core.js','cloud-records.js','firebase-config.js','records.css','game-catalog.js'].map(path=>new URL(path,BASE).href);
+const ASSETS=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','records.js','records.js?v=6','records-core.js','cloud-records.js','firebase-config.js','records.css','records.css?v=6','game-catalog.js'].map(path=>new URL(path,BASE).href);
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('score-counter-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
